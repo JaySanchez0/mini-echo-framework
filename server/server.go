@@ -13,6 +13,7 @@ type Context struct {
 	json string
 }
 
+// This function return text plain
 func (context *Context) String(status int, data string) error {
 	fmt.Fprintln(context.con, "HTTP/1.1 200 Ok\nContent-Type:text/plain\n\n"+data)
 	fmt.Println(strconv.Itoa(status))
@@ -20,6 +21,7 @@ func (context *Context) String(status int, data string) error {
 	return nil
 }
 
+// This Function return HTML
 func (context *Context) Html(status int, data string) error {
 	fmt.Fprintln(context.con, "HTTP/1.1 200 Ok\nContent-Type:text/html\n\n"+data)
 	fmt.Println(strconv.Itoa(status))
@@ -27,6 +29,7 @@ func (context *Context) Html(status int, data string) error {
 	return nil
 }
 
+// This function return a Json from any object-
 func (context *Context) Json(status int, data interface{}) error {
 	d, er := json.Marshal(data)
 	if er == nil {
@@ -38,6 +41,7 @@ func (context *Context) Json(status int, data interface{}) error {
 	return nil
 }
 
+// This function call unmarshall from object - Conver JSON string to object
 func (context *Context) Bind(data interface{}) error {
 	return json.Unmarshal([]byte(context.json), data)
 }
@@ -51,14 +55,17 @@ type Server struct {
 	methods map[Oper]func(Context) error
 }
 
+// Get Request
 func (server *Server) Get(path string, f func(Context) error) {
 	server.methods[Oper{Method: "GET", Path: path}] = f
 }
 
+// Post Request
 func (server *Server) Post(path string, f func(Context) error) {
 	server.methods[Oper{Method: "POST", Path: path}] = f
 }
 
+//On client connect to socket
 func (server *Server) onListen(s net.Conn) {
 	x := make([]byte, 1024)
 	s.Read(x)
@@ -82,6 +89,7 @@ func (server *Server) onListen(s net.Conn) {
 	}
 }
 
+// Start to listen the web server
 func (server *Server) Start(port string) {
 	s, e := net.Listen("tcp", port)
 	if e == nil {
@@ -97,6 +105,7 @@ func (server *Server) Start(port string) {
 	}
 }
 
+//Create a server instance
 func New() *Server {
 	x := &Server{methods: make(map[Oper]func(Context) error)}
 	return x
