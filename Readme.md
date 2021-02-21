@@ -1,5 +1,5 @@
 # Server Go
 
-This a mini server test
+This a mini server test implementation
 
 [echo framework](https://echo.labstack.com/)
