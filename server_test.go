@@ -1,21 +1,16 @@
-package test
+package main
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
-	"main/server"
 	"net/http"
 	"os"
+	"server/server"
 	"strings"
 	"testing"
 )
-
-type People struct {
-	Name string `json:"name"`
-	Age  int    `json:"age"`
-}
 
 func TestMain(m *testing.M) {
 	fmt.Println("Setup")

@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"main/server"
 	"net/http"
+	"server/server"
 )
 
 type People struct {
