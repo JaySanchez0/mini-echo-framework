@@ -97,6 +97,7 @@ func (server *Server) listen(s net.Listener) {
 		fmt.Println("Esperando")
 		client, e := s.Accept()
 		if e == nil {
+
 			go server.onListen(client)
 		}
 	}
