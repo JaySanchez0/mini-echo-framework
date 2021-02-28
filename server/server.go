@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -67,7 +68,8 @@ func (server *Server) Post(path string, f func(Context) error) {
 
 //On client connect to socket
 func (server *Server) onListen(s net.Conn) {
-	x := make([]byte, 1024)
+	reader := bufio.NewReader(s)
+	x := make([]byte, reader.Size())
 	s.Read(x)
 	fmt.Println(string(x))
 	w := strings.Split(string(x), "\n")
