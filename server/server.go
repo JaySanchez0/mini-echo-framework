@@ -54,6 +54,7 @@ type Oper struct {
 
 type Server struct {
 	methods map[Oper]func(Context) error
+	socket  net.Listener
 }
 
 // Get Request
@@ -91,20 +92,29 @@ func (server *Server) onListen(s net.Conn) {
 	}
 }
 
+func (server *Server) listen(s net.Listener) {
+	for {
+		fmt.Println("Esperando")
+		client, e := s.Accept()
+		if e == nil {
+			go server.onListen(client)
+		}
+	}
+}
+
 // Start to listen the web server
 func (server *Server) Start(port string) {
 	s, e := net.Listen("tcp", port)
+	server.socket = s
 	if e == nil {
-		for {
-			fmt.Println("Esperando")
-			client, e := s.Accept()
-			if e == nil {
-				go server.onListen(client)
-			}
-		}
+		go server.listen(s)
 	} else {
 		fmt.Println("No se pudo iniciar")
 	}
+}
+
+func (server *Server) Stop() {
+	server.socket.Close()
 }
 
 //Create a server instance
