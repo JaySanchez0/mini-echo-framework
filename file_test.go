@@ -4,7 +4,7 @@ import (
 	"app/server"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -55,7 +55,7 @@ func TestMain(m *testing.M) {
 
 func TestShouldBeGetPet(t *testing.T) {
 	res, _ := http.Get(url + "/pet")
-	b, _ := io.ReadAll(res.Body)
+	b, _ := ioutil.ReadAll(res.Body)
 	p := Pet{}
 	if json.Unmarshal(b, &p) != nil || p.Name != "MePet" {
 		t.Error("Invalid")
@@ -68,7 +68,7 @@ func TestShouldBePost(t *testing.T) {
 	b, _ := json.Marshal(&pt)
 	rq, _ := http.NewRequest("POST", url+"/pet", strings.NewReader(string(b)))
 	res, _ := cli.Do(rq)
-	bt, _ := io.ReadAll(res.Body)
+	bt, _ := ioutil.ReadAll(res.Body)
 	pt2 := Pet{}
 	json.Unmarshal(bt, &pt)
 	if json.Unmarshal(bt, &pt) != nil || pt2.Name != pt.Name {
@@ -78,7 +78,7 @@ func TestShouldBePost(t *testing.T) {
 
 func TestShouldBeMatchQuery(t *testing.T) {
 	res, _ := http.Get(url + "/mpet?name=pablo")
-	b, _ := io.ReadAll(res.Body)
+	b, _ := ioutil.ReadAll(res.Body)
 	p := Pet{}
 	if json.Unmarshal(b, &p) != nil || p.Name != "pablo" {
 		t.Error()
@@ -87,7 +87,7 @@ func TestShouldBeMatchQuery(t *testing.T) {
 
 func TestShouldBeMapParams(t *testing.T) {
 	res, _ := http.Get(url + "/pet/kev")
-	b, _ := io.ReadAll(res.Body)
+	b, _ := ioutil.ReadAll(res.Body)
 	p := Pet{}
 	if json.Unmarshal(b, &p) != nil || p.Name != "kev" {
 		t.Error()
