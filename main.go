@@ -1,42 +1,34 @@
 package main
 
 import (
+	"app/server"
 	"fmt"
 	"net/http"
-	"server/server"
 )
 
 type People struct {
-	Name string `json:"name"`
-	Age  int    `json:"age"`
+	Name string
+	Test string
 }
 
 func main() {
-	x := server.New()
-	x.Get("/", func(c server.Context) error {
-		return c.String(http.StatusAccepted, "Hola")
+	ser := server.New()
+	ser.Get("/notes", func(c server.Context) error {
+		p := People{Name: c.Query["name"], Test: c.Query["age"]}
+		fmt.Println(c.Query)
+		return c.Json(http.StatusAccepted, &p)
 	})
-	x.Get("/html", func(c server.Context) error {
-		return c.Html(http.StatusAccepted, "<h1>Hola</h1>")
-	})
-	x.Get("/json", func(c server.Context) error {
-		x := []int{1, 2, 3}
-		return c.Json(http.StatusAccepted, x)
-	})
-	x.Post("/post", func(c server.Context) error {
-		p := People{}
-		e := c.Bind(&p)
-		if e == nil {
-			fmt.Println("Convirtio")
-			fmt.Println("Name")
-			fmt.Println(p.Name)
-			fmt.Println("Age")
-			fmt.Println(p.Age)
-		} else {
-			fmt.Println(e.Error())
-		}
 
-		return c.Json(http.StatusAccepted, p)
+	ser.Get("/notes/:id", func(c server.Context) error {
+		p := People{Name: c.GetParam("id")}
+		fmt.Println(c.Query)
+		return c.Json(http.StatusAccepted, &p)
 	})
-	x.Start(":80")
+
+	ser.Post("/notes", func(c server.Context) error {
+		p := People{}
+		c.Bind(&p)
+		return c.Json(http.StatusAccepted, &p)
+	})
+	ser.Start(80)
 }

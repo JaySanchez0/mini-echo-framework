@@ -5,121 +5,183 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
 )
 
-type Context struct {
-	con  net.Conn
-	json string
+type Echo struct {
+	handlers []Cond
 }
 
-// This function return text plain
-func (context *Context) String(status int, data string) error {
-	fmt.Fprintln(context.con, "HTTP/1.1 200 Ok\nContent-Type:text/plain\n\n"+data)
-	fmt.Println(strconv.Itoa(status))
-	context.con.Close()
-	return nil
-}
-
-// This Function return HTML
-func (context *Context) Html(status int, data string) error {
-	fmt.Fprintln(context.con, "HTTP/1.1 200 Ok\nContent-Type:text/html\n\n"+data)
-	fmt.Println(strconv.Itoa(status))
-	context.con.Close()
-	return nil
-}
-
-// This function return a Json from any object-
-func (context *Context) Json(status int, data interface{}) error {
-	d, er := json.Marshal(data)
-	if er == nil {
-		fmt.Fprintln(context.con, "HTTP/1.1 200 Ok\nContent-Type:application/json\n\n"+string(d))
-	} else {
-		fmt.Fprintf(context.con, "HTTP/1.1 404 Not Found\n\n")
-	}
-	context.con.Close()
-	return nil
-}
-
-// This function call unmarshall from object - Conver JSON string to object
-func (context *Context) Bind(data interface{}) error {
-	return json.Unmarshal([]byte(context.json), data)
-}
-
-type Oper struct {
-	Method string
+type Cond struct {
 	Path   string
+	Method string
+	f      func(Context) error
 }
 
-type Server struct {
-	methods map[Oper]func(Context) error
-	socket  net.Listener
+type Context struct {
+	Method      string
+	Path        string
+	Query       map[string]string
+	Headers     map[string]string
+	MatchingUrl string
+	body        []byte
+	con         net.Conn
 }
 
-// Get Request
-func (server *Server) Get(path string, f func(Context) error) {
-	server.methods[Oper{Method: "GET", Path: path}] = f
-}
-
-// Post Request
-func (server *Server) Post(path string, f func(Context) error) {
-	server.methods[Oper{Method: "POST", Path: path}] = f
-}
-
-//On client connect to socket
-func (server *Server) onListen(s net.Conn) {
-	reader := bufio.NewReader(s)
-	x := make([]byte, reader.Size())
-	s.Read(x)
-	fmt.Println(string(x))
-	w := strings.Split(string(x), "\n")
-	wi := strings.Split(w[0], " ")
-	w[len(w)-1] = strings.Replace(w[len(w)-1], "\x00", "", -1)
-	fmt.Println()
-	var c Context
-	if wi[0] != "GET" {
-		c = Context{con: s, json: w[len(w)-1]}
-	} else {
-		c = Context{con: s}
+func (context *Context) MatchPath(path string) bool {
+	// User url
+	p1 := strings.Split(context.Path, "/")
+	// Url to match response
+	p2 := strings.Split(path, "/")
+	if len(p1) != len(p2) {
+		return false
 	}
-	f := server.methods[Oper{Method: wi[0], Path: wi[1]}]
-	if f != nil {
-		f(c)
-	} else {
-		fmt.Fprintf(s, "HTTP/1.1 404 Not Found\n\n")
-		s.Close()
-	}
-}
-
-func (server *Server) listen(s net.Listener) {
-	for {
-		fmt.Println("Esperando")
-		client, e := s.Accept()
-		if e == nil {
-
-			go server.onListen(client)
+	for i := 0; i < len(p1); i++ {
+		//fmt.Println(": ok - " + p1[i])
+		//fmt.Println("p1[i][0] - " + string(p2[i]))
+		if p1[i] != p2[i] && p2[i][0] != ':' {
+			fmt.Println("Resp 2")
+			fmt.Println(p1[i])
+			fmt.Println(p2[i])
+			return false
 		}
 	}
+	return true
 }
 
-// Start to listen the web server
-func (server *Server) Start(port string) {
-	s, e := net.Listen("tcp", port)
-	server.socket = s
+func (context *Context) GetParam(name string) string {
+	p1 := strings.Split(context.MatchingUrl, "/")
+	p2 := strings.Split(context.Path, "/")
+	for i := 0; i < len(p1); i++ {
+		if p1[i] != p2[i] && p1[i][1:] == name {
+			return p2[i]
+		}
+	}
+	return ""
+}
+
+func (context *Context) Json(status int, data interface{}) error {
+	b, e := json.Marshal(data)
+	w := ""
 	if e == nil {
-		go server.listen(s)
+		w = "HTTP/1.1 " + strconv.Itoa(status) + " Ok\nContent-Type:application/json\n\n" + string(b)
 	} else {
-		fmt.Println("No se pudo iniciar")
+		w = "HTTP/1.1 " + strconv.Itoa(http.StatusInternalServerError) + " InternalServerError\nContent-Type:application/json\n\n" + string(b)
+	}
+	//fmt.Println(w)
+	fmt.Fprint(context.con, w)
+	context.con.Close()
+	return e
+}
+
+func (context *Context) Bind(obj interface{}) error {
+	fmt.Println(string(context.body))
+	return json.Unmarshal(context.body, obj)
+}
+
+func (echo *Echo) buildRequest(con net.Conn, headers string, body string) Context {
+	splitHeaders := strings.Split(headers, "\n")
+	first := strings.Split(splitHeaders[0], " ")
+	headersMap := map[string]string{}
+	for i := 1; i < len(splitHeaders); i++ {
+		currentLine := splitHeaders[i]
+		li := strings.Split(currentLine, ":")
+		//fmt.Println(currentLine)
+		//fmt.Print(li)
+		if len(li) == 2 {
+			headersMap[li[0]] = li[1]
+		}
+	}
+	if len(first) == 3 {
+		//fmt.Println("--- Start first ----------")
+		//fmt.Println(first)
+		//fmt.Println("--- ENd first ----------")
+		uripath := strings.Split(first[1], "?")
+		query := map[string]string{}
+		if len(uripath) == 2 {
+			q := strings.Split(uripath[1], "&")
+			for _, w := range q {
+				it := strings.Split(w, "=")
+				query[it[0]] = it[1]
+			}
+		}
+		return Context{
+			Method:  first[0],
+			Path:    uripath[0],
+			Query:   query,
+			Headers: headersMap,
+			body:    []byte(body),
+			con:     con,
+		}
+	}
+	return Context{}
+}
+
+func (echo *Echo) processRequest(cli net.Conn) {
+	reader := bufio.NewReader(cli)
+	byteli := make([]byte, reader.Size()-1)
+	cli.Read(byteli)
+	res := string(byteli)
+	// Separa el cuerpo y el body, y si encuentra espacios los limpia
+	li := strings.Split(res, "\n\r\n\r")
+	headerBody := make([]string, 2)
+	// litmp contiene 0 - headers y 1 - body
+	headerBody[0] = li[0]
+	if len(li) >= 2 {
+		headerBody[1] = "" //Body
+		for i := 1; i < len(li); i++ {
+			headerBody[1] = headerBody[1] + li[i] // Construye body
+		}
+		headerBody[1] = strings.Trim(strings.Trim(headerBody[1], " "), "\n\r")
+	} else {
+		headerBody[1] = ""
+	}
+	headerBody[1] = strings.Replace(headerBody[1], string('\x00'), "", -1)
+	fmt.Println(headerBody[1])
+	c := echo.buildRequest(cli, headerBody[0], headerBody[1])
+	isInvoke := false
+	for _, p := range echo.handlers {
+		if p.Method == c.Method && c.MatchPath(p.Path) {
+			c.MatchingUrl = p.Path
+			isInvoke = true
+			p.f(c)
+		}
+	}
+	if !isInvoke && c.Method != "" {
+		// Request no vacio
+		w := "HTTP/1.1 " + strconv.Itoa(http.StatusNotFound) + " InternalServerError\nContent-Type:text/plain\n\n" + "404 not found"
+		fmt.Fprint(c.con, w)
+		c.con.Close()
 	}
 }
 
-func (server *Server) Stop() {
-	server.socket.Close()
+func (echo *Echo) Start(port int) {
+	server, _ := net.Listen("tcp", ":80")
+	for {
+		cli, _ := server.Accept()
+		go echo.processRequest(cli)
+
+	}
 }
 
-//Create a server instance
-func New() *Server {
-	x := &Server{methods: make(map[Oper]func(Context) error)}
-	return x
+func (echo *Echo) Get(path string, f func(Context) error) {
+	echo.handlers = append(echo.handlers, Cond{Method: "GET", Path: path, f: f})
+}
+
+func (echo *Echo) Post(path string, f func(Context) error) {
+	echo.handlers = append(echo.handlers, Cond{Method: "POST", Path: path, f: f})
+}
+
+func (echo *Echo) Put(path string, f func(Context) error) {
+	echo.handlers = append(echo.handlers, Cond{Method: "PUT", Path: path, f: f})
+}
+
+func (echo *Echo) Delete(path string, f func(Context) error) {
+	echo.handlers = append(echo.handlers, Cond{Method: "DELETE", Path: path, f: f})
+}
+
+func New() *Echo {
+	return &Echo{}
 }
