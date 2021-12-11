@@ -85,7 +85,6 @@ func TestShouldBeMatchQuery(t *testing.T) {
 }
 
 func TestShouldBeMapParams(t *testing.T) {
-	t.Error()
 	res, _ := http.Get(url + "/pet/kev")
 	b, _ := ioutil.ReadAll(res.Body)
 	p := Pet{}
