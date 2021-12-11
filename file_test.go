@@ -95,5 +95,5 @@ func TestShouldBeMapParams(t *testing.T) {
 }
 
 func GetPort() int {
-	return 80
+	return 3032
 }
