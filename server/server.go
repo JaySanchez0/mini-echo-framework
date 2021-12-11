@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -161,7 +160,7 @@ func (echo *Echo) processRequest(cli net.Conn) {
 
 func (echo *Echo) Start(port int) {
 	server, _ := net.Listen("tcp", ":80")
-	go echo.listenApp(server)
+	echo.listenApp(server)
 }
 
 func (echo *Echo) listenApp(server net.Listener) {
@@ -189,8 +188,7 @@ func (echo *Echo) Delete(path string, f func(Context) error) {
 }
 
 func (echo *Echo) Stop() {
-
-	os.Exit(0)
+	echo.con.Close()
 }
 
 func New() *Echo {

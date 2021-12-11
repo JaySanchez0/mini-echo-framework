@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 	s.Get("/mpet", GetQueryTestEndPoint)
 	s.Delete("/pet", DeleteTestEndPoint)
 	s.Put("/pet", PutTestEndPoint)
-	s.Start(80)
+	go s.Start(80)
 	fmt.Println("Inicio correr pruebas")
 	os.Exit(m.Run())
 }
