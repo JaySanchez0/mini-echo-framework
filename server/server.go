@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 )
 
 type Echo struct {
 	handlers []Cond
+	con      net.Conn
 }
 
 type Cond struct {
@@ -159,6 +161,10 @@ func (echo *Echo) processRequest(cli net.Conn) {
 
 func (echo *Echo) Start(port int) {
 	server, _ := net.Listen("tcp", ":80")
+	go echo.listenApp(server)
+}
+
+func (echo *Echo) listenApp(server net.Listener) {
 	for {
 		cli, _ := server.Accept()
 		go echo.processRequest(cli)
@@ -180,6 +186,11 @@ func (echo *Echo) Put(path string, f func(Context) error) {
 
 func (echo *Echo) Delete(path string, f func(Context) error) {
 	echo.handlers = append(echo.handlers, Cond{Method: "DELETE", Path: path, f: f})
+}
+
+func (echo *Echo) Stop() {
+
+	os.Exit(0)
 }
 
 func New() *Echo {
