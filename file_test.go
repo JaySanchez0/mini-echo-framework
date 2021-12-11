@@ -44,6 +44,7 @@ func TestMain(m *testing.M) {
 	defer s.Stop()
 	url = "http://localhost:" + strconv.Itoa(GetPort())
 	s.Get("/pet", GetTestEndpoint)
+
 	s.Get("/pet/:name", GetParamTestEndPoint)
 	s.Post("/pet", PostTestEndPoint)
 	s.Get("/mpet", GetQueryTestEndPoint)
