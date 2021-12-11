@@ -44,6 +44,11 @@ func DeleteTestEndPoint(context server.Context) error {
 	return context.Json(http.StatusAccepted, &p)
 }
 
+func PutTestEndPoint(context server.Context) error {
+	p := Pet{Name: "Put"}
+	return context.Json(http.StatusAccepted, &p)
+}
+
 func TestMain(m *testing.M) {
 	s := server.New()
 	defer s.Stop()
@@ -53,6 +58,7 @@ func TestMain(m *testing.M) {
 	s.Post("/pet", PostTestEndPoint)
 	s.Get("/mpet", GetQueryTestEndPoint)
 	s.Delete("/pet", DeleteTestEndPoint)
+	s.Put("/pet", PutTestEndPoint)
 	s.Start(80)
 	fmt.Println("Inicio correr pruebas")
 	os.Exit(m.Run())
@@ -106,6 +112,17 @@ func TestShouldBeCallDeleteMethod(t *testing.T) {
 	b, _ := ioutil.ReadAll(resp.Body)
 	p := Pet{}
 	if json.Unmarshal(b, &p) != nil || p.Name != "Delete" {
+		t.Error()
+	}
+}
+
+func TestShouldBeCallPut(t *testing.T) {
+	cli := http.Client{}
+	req, _ := http.NewRequest("PUT", url+"/pet", nil)
+	resp, _ := cli.Do(req)
+	b, _ := ioutil.ReadAll(resp.Body)
+	p := Pet{}
+	if json.Unmarshal(b, &p) != nil || p.Name != "Put" {
 		t.Error()
 	}
 }
